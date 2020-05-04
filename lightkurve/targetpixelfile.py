@@ -399,7 +399,7 @@ class TargetPixelFile(object):
         else:
             raise ValueError("Photometry method must be 'aperture' or 'prf'.")
 
-    def extract_aperture_photometry(self, aperture_mask='pipeline', centroid_method='moments'):
+    def extract_aperture_photometry(self, aperture_mask='pipeline', centroid_method='moments', *args, **kwargs):
         """Returns a LightCurve obtained using aperture photometry.
 
         Parameters
@@ -419,7 +419,7 @@ class TargetPixelFile(object):
             Array containing the summed flux within the aperture for each
             cadence.
         """
-        aperture_mask = self._parse_aperture_mask(aperture_mask)
+        aperture_mask = self._parse_aperture_mask(aperture_mask, *args, **kwargs)
         if aperture_mask.sum() == 0:
             log.warning('Warning: aperture mask contains zero pixels.')
         centroid_col, centroid_row = self.estimate_centroids(aperture_mask,centroid_method)
@@ -435,7 +435,7 @@ class TargetPixelFile(object):
                 dec=self.dec, label=self.header['OBJECT'], targetid=self.targetid)
 
 
-    def _parse_aperture_mask(self, aperture_mask):
+    def _parse_aperture_mask(self, aperture_mask, *args, **kwargs):
         """Parse the `aperture_mask` parameter as given by a user.
 
         The `aperture_mask` parameter is accepted by a number of methods.
@@ -473,12 +473,33 @@ class TargetPixelFile(object):
                 aperture_mask = self.pipeline_mask
             elif aperture_mask == 'threshold':
                 aperture_mask = self.create_threshold_mask()
+            elif aperture_mask == 'circular':
+                aperture_mask = self.create_circular_mask(*args, **kwargs)
             elif np.issubdtype(aperture_mask.dtype, np.integer) and \
                 ((aperture_mask & 2) == 2).any():
                 # Kepler and TESS pipeline style integer flags
                 aperture_mask = (aperture_mask & 2) == 2
         self._last_aperture_mask = aperture_mask
         return aperture_mask
+
+    def create_circular_mask(self, r=3, centre=None, *args, **kwargs):
+        if centre is None:
+            centre = self.find_centre(*args, **kwargs)
+        else:
+            assert len(centre) == 2 and 0 < centre[0] < len(self.flux.shape[1]) and 0 < centre[1] < len(self.flux.shape[2])
+        assert r >= 0
+        nx, ny = self.flux.shape[-2:]
+        pix_x = np.arange(nx)[:, np.newaxis].repeat(ny, 1)
+        pix_y = np.arange(ny)[np.newaxis, :].repeat(nx, 0)
+        return (pix_x - centre[0]) ** 2 + (pix_y - centre[1]) ** 2 <= r ** 2
+
+    def find_centre(self, method='max'):
+        """ could potentially put this method higher up in the hierarchy"""
+        image = np.nanmedian(self.flux, axis=0)
+        if method == 'max':
+            return np.unravel_index(np.argmax(image), image.shape)
+        else:
+            raise NotImplementedError
 
     def create_threshold_mask(self, threshold=3, reference_pixel='center'):
         """Returns an aperture mask creating using the thresholding method.

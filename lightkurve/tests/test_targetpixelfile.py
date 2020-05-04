@@ -220,6 +220,7 @@ def test_to_lightcurve():
         tpf.to_lightcurve()
         tpf.to_lightcurve(aperture_mask=None)
         tpf.to_lightcurve(aperture_mask='all')
+        tpf.to_lightcurve(aperture_mask='circular')
         lc = tpf.to_lightcurve(aperture_mask='pipeline')
         assert lc.label == tpf.hdu[0].header['OBJECT']
         # Generic TPFs have unknown timescales by default
@@ -236,6 +237,7 @@ def test_bkg_lightcurve():
         lc = tpf.get_bkg_lightcurve()
         lc = tpf.get_bkg_lightcurve(aperture_mask=None)
         lc = tpf.get_bkg_lightcurve(aperture_mask='all')
+        lc = tpf.get_bkg_lightcurve(aperture_mask='circular')
         assert lc.astropy_time.scale == 'tdb'
         assert lc.flux.shape == lc.flux_err.shape
         assert len(lc.time) == len(lc.flux)
@@ -249,6 +251,7 @@ def test_aperture_photometry():
         tpf.extract_aperture_photometry(aperture_mask=None)
         tpf.extract_aperture_photometry(aperture_mask='all')
         tpf.extract_aperture_photometry(aperture_mask='pipeline')
+        tpf.extract_aperture_photometry(aperture_mask='circular')
 
 
 def test_tpf_to_fits():
@@ -493,6 +496,18 @@ def test_threshold_aperture_mask():
     tpf = KeplerTargetPixelFile(filename_tpf_all_zeros)
     assert tpf.create_threshold_mask().sum() == 0
 
+
+def test_find_centre():
+    """ does the centre finder work?"""
+    tpf = KeplerTargetPixelFile(filename_tpf_one_center)
+    centre = tpf.find_centre()
+    assert len(centre) == 2
+    assert centre[0] > 0 and centre[1] > 0
+
+def test_circular_aperture_mask():
+    tpf = KeplerTargetPixelFile(filename_tpf_one_center)
+    mask = tpf.create_circular_mask(0.5)
+    assert .5 < mask.sum() < 1.5
 
 def test_tpf_tess():
     """Does a TESS Sector 1 TPF work?"""
