@@ -1497,3 +1497,12 @@ class TessTargetPixelFile(TargetPixelFile):
                 targetid=self.targetid, quality=self.quality, ra=self.ra,
                 dec=self.dec, sector=self.sector, camera=self.camera,
                 cadenceno=self.cadenceno, ccd=self.ccd)
+
+
+class SpitzerTargetPixelFile(TargetPixelFile):
+    def __init__(self, path, quality_bitmask=None, targetid=None, **kwargs):
+        super().__init__(path, quality_bitmask, targetid, **kwargs)
+
+    def from_fits_images(images, position, size=(11, 11), extension=1,
+                         targetid="unnamed-target", hdu0_keywords=None, **kwargs):
+        raise NotImplementedError

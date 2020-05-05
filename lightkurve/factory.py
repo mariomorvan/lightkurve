@@ -285,3 +285,15 @@ class KeplerTargetPixelFileFactory(TargetPixelFileFactory):
         warnings.warn(msg, LightkurveWarning)
         super(KeplerTargetPixelFileFactory, self).__init__(n_cadences, n_rows, n_cols, targetid=targetid,
                      keywords=keywords)
+
+
+class SpitzerTargetPixelFileFactory(TargetPixelFileFactory):
+    """Same as TargetPixelFileFactory."""
+    def __init__(self, n_cadences, n_rows, n_cols, targetid="unnamed-target",
+                 keywords=None):
+        super().__init__(n_cadences, n_rows, n_cols, targetid=targetid, keywords=keywords)
+
+    def add_cadence(self, frameno, raw_cnts=None, flux=None, flux_err=None,
+                    flux_bkg=None, flux_bkg_err=None, quality=None, cosmic_rays=None,
+                    header=None):
+        super().add_cadence(frameno, raw_cnts, flux, flux_err, flux_bkg, flux_bkg_err, cosmic_rays, header)
