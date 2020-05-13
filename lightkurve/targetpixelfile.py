@@ -1512,7 +1512,7 @@ class SpitzerTargetPixelFile(TargetPixelFile):
         """ returns a bkg flux estimation.
         Method overwritten for Spitzer as there's a priori no off-the-shelf
         bkg flux in the corresponding fits file """
-        return self._flux_bkg
+        return self._flux_bkg[self.quality_mask, None, None] * np.ones_like(self.flux)
 
 
     def estimate_bkg_flux(self, aperture_mask='circular', r=15):
@@ -1521,6 +1521,5 @@ class SpitzerTargetPixelFile(TargetPixelFile):
         Could be that this should be done while creating the TPF itself instead,
         to be able to take a larger annulus"""
         star_mask = self._parse_aperture_mask(aperture_mask, r=r)
-        self._bkg_flux = np.nanmedian(self.flux[:, ~star_mask], 1)
-
+        self._flux_bkg = np.nanmedian(self.flux[:, ~star_mask], 1)
 
