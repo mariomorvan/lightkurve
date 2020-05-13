@@ -1514,12 +1514,12 @@ class SpitzerTargetPixelFile(TargetPixelFile):
         bkg flux in the corresponding fits file """
         return self._flux_bkg[self.quality_mask, None, None] * np.ones_like(self.flux)
 
-    def estimate_bkg_flux(self, aperture_mask='circular', r=15):
+    def estimate_bkg_flux(self, aperture_mask='circular', bkg_r=15):
         """Performs background flux per pixel estimation.
         Not thoroughly tested, use at your own risk.
         Could be that this should be done while creating the TPF itself instead,
         to be able to take a larger annulus"""
-        star_mask = self._parse_aperture_mask(aperture_mask, r=r)
+        star_mask = self._parse_aperture_mask(aperture_mask, r=bkg_r)
         self._flux_bkg = np.nanmedian(self.flux[:, ~star_mask], 1)
 
     def get_bkg_lightcurve(self, aperture_mask='circular', **kwargs):
