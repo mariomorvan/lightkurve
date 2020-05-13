@@ -30,7 +30,7 @@ from .utils import KeplerQualityFlags, TessQualityFlags, \
                    centroid_quadratic
 
 __all__ = ['TargetPixelFile', 'KeplerTargetPixelFile', 'TessTargetPixelFile']
-from .factory import TargetPixelFileFactory
+from .factory import TargetPixelFileFactory, SpitzerTargetPixelFileFactory
 
 log = logging.getLogger(__name__)
 
@@ -1502,7 +1502,33 @@ class TessTargetPixelFile(TargetPixelFile):
 class SpitzerTargetPixelFile(TargetPixelFile):
     def __init__(self, path, quality_bitmask=None, targetid=None, **kwargs):
         super().__init__(path, quality_bitmask, targetid, **kwargs)
+        self._flux_bkg = np.ones_like(self.flux) * np.nan
 
-    def from_fits_images(images, position, size=(11, 11), extension=1,
-                         targetid="unnamed-target", hdu0_keywords=None, **kwargs):
-        raise NotImplementedError
+    def __repr__(self):
+        return('SpitzerTargetPixelFile Object (ID: {})'.format(self.targetid))
+
+    @property
+    def flux_bkg(self):
+        """ returns a bkg flux estimation.
+        Method overwritten for Spitzer as there's a priori no off-the-shelf
+        bkg flux in the corresponding fits file """
+        return self._flux_bkg
+
+
+    def estimate_bkg_flux(self, aperture_mask='circular', r=15):
+        """Performs background flux estimation.
+        Not thoroughly tested, use at your own risk.
+        Could be that this should be done while creating the TPF itself instead,
+        to be able to take a larger annulus"""
+        star_mask = self._parse_aperture_mask(aperture_mask, r=r)
+        self._bkg_flux = np.nanmedian(self.flux[:, ~star_mask], 1)
+
+    @staticmethod
+    def from_fits_images(images, position, size=(11, 11), extension=1, targetid="unnamed-target", hdu0_keywords=None,
+                         **kwargs):
+        return super(SpitzerTargetPixelFile, SpitzerTargetPixelFile).\
+            from_fits_images(images, position, size, extension, targetid, hdu0_keywords, **kwargs)
+
+
+
+
