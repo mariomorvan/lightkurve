@@ -1523,6 +1523,8 @@ class SpitzerTargetPixelFile(TargetPixelFile):
         self._flux_bkg = np.nanmedian(self.flux[:, ~star_mask], 1)
 
     def get_bkg_lightcurve(self, aperture_mask='circular', **kwargs):
+        if np.isnan(self._flux_bkg).all():
+            self.estimate_bkg_flux()   # Careful, shall not be the same aperture as for the light integration
         aperture_mask = self._parse_aperture_mask(aperture_mask, **kwargs)
         # Ignore warnings related to zero or negative errors
         with warnings.catch_warnings():
