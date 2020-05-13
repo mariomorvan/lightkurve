@@ -1537,9 +1537,7 @@ class SpitzerTargetPixelFile(TargetPixelFile):
                           targetid=self.targetid, quality=self.quality,
                           mission=self.mission)
 
-
-
-    def extract_aperture_photometry(self, aperture_mask='pipeline', centroid_method='moments', sub_bkg=True, *args, **kwargs):
+    def extract_aperture_photometry(self, aperture_mask='circular', centroid_method='moments', sub_bkg=True, *args, **kwargs):
         """Returns a LightCurve obtained using aperture photometry.
 
         Parameters
