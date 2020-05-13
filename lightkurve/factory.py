@@ -289,11 +289,54 @@ class KeplerTargetPixelFileFactory(TargetPixelFileFactory):
 
 class SpitzerTargetPixelFileFactory(TargetPixelFileFactory):
     """Same as TargetPixelFileFactory."""
-    def __init__(self, n_cadences, n_rows, n_cols, targetid="unnamed-target",
+    def __init__(self, n_cadences, n_rows, n_cols, n_sub=0, targetid="unnamed-target",
                  keywords=None):
-        super().__init__(n_cadences, n_rows, n_cols, targetid=targetid, keywords=keywords)
+        super().__init__(n_cadences * (n_sub if n_sub else 1), n_rows, n_cols, targetid=targetid, keywords=keywords)
+        self.n_sub = n_sub
 
     def add_cadence(self, frameno, raw_cnts=None, flux=None, flux_err=None,
-                    flux_bkg=None, flux_bkg_err=None, quality=None, cosmic_rays=None,
+                    flux_bkg=None, flux_bkg_err=None, cosmic_rays=None,
                     header=None):
-        super().add_cadence(frameno, raw_cnts, flux, flux_err, flux_bkg, flux_bkg_err, cosmic_rays, header)
+        """Populate the data for a single cadence."""
+        if frameno >= self.n_cadences:
+            raise FactoryError('Can not add cadence {}, n_cadences set to {}'.format(frameno, self.n_cadences))
+        if header is None:
+            header = {}
+
+        # 2D-data
+        for col in ['raw_cnts', 'flux', 'flux_err', 'flux_bkg',
+                    'flux_bkg_err', 'cosmic_rays']:
+            if locals()[col] is not None:
+                if self.n_sub:
+                    if locals()[col].shape != (self.n_sub, self.n_rows, self.n_cols):
+                        raise FactoryError('Can not add cadence with a different shape ({} x {})'.format(self.n_rows, self.n_cols))
+                    vars(self)[col][self.n_sub * frameno:self.n_sub * (frameno + 1)] = locals()[col]
+                else:
+                    if locals()[col].shape != (self.n_rows, self.n_cols):
+                        raise FactoryError('Can not add cadence with a different'
+                                           'subarry shape ({} x {} x {})'.format(self.n_sub, self.n_rows, self.n_cols))
+                    vars(self)[col][frameno] = locals()[col]
+
+        # 1D-data
+        if 'TSTART' in header and 'TSTOP' in header:
+            self.time[frameno] = (header['TSTART'] + header['TSTOP']) / 2.
+        elif 'BMJD_OBS' in header and 'FRAMTIME' in header:
+            if not self.n_sub:
+                self.time[frameno] = header['BMJD_OBS'] + header['FRAMTIME'] / 2. / 86400.0
+            else:
+                self.time[frameno * self.n_sub:(frameno + 1) * self.n_sub] = \
+                    np.linspace(0., header['FRAMTIME'] * self.n_sub / 86400.0, self.n_sub) + header['BMJD_OBS']
+        if 'TIMECORR' in header:
+            self.timecorr[frameno] = header['TIMECORR']
+        if 'CADENCEN' in header:
+            self.cadenceno[frameno] = header['CADENCEN']
+        if 'QUALITY' in header:
+            self.quality[frameno] = header['QUALITY']
+        if 'POS_CORR1' in header:
+            self.pos_corr1[frameno] = header['POS_CORR1']
+        elif 'PTGDIFFX' in header:
+            self.pos_corr1[frameno] = header['PTGDIFFX']
+        if 'POS_CORR2' in header:
+            self.pos_corr2[frameno] = header['POS_CORR2']
+        elif 'PTGDIFFY' in header:
+            self.pos_corr2[frameno] = header['PTGDIFFY']
