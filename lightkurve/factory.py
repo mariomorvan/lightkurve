@@ -121,17 +121,20 @@ class TargetPixelFileFactory(object):
         if 'MISSION' in hdu0_keywords.keys():
             mission = hdu0_keywords['MISSION']
 
-        from .targetpixelfile import TargetPixelFile, KeplerTargetPixelFile, TessTargetPixelFile
+        from .targetpixelfile import TargetPixelFile, KeplerTargetPixelFile, TessTargetPixelFile, SpitzerTargetPixelFile
 
         if (mission=='Kepler') or (mission=='K2'):
             return KeplerTargetPixelFile(self._hdulist(hdu0_keywords=hdu0_keywords,
                                         ext_info=ext_info), **kwargs)
         elif mission=='TESS':
             return TessTargetPixelFile(self._hdulist(hdu0_keywords=hdu0_keywords,
-                                        ext_info=ext_info), **kwargs)
+                                       ext_info=ext_info), **kwargs)
+        elif mission=='Spitzer':
+            return SpitzerTargetPixelFile(self._hdulist(hdu0_keywords=hdu0_keywords,
+                                          ext_info=ext_info), **kwargs)
         else:
             return TargetPixelFile(self._hdulist(hdu0_keywords=hdu0_keywords,
-                                        ext_info=ext_info), **kwargs)
+                                   ext_info=ext_info), **kwargs)
 
     def _hdulist(self, hdu0_keywords, ext_info):
         """Returns an astropy.io.fits.HDUList object."""
