@@ -1537,3 +1537,46 @@ class SpitzerTargetPixelFile(TargetPixelFile):
                           targetid=self.targetid, quality=self.quality,
                           mission=self.mission)
 
+
+
+    def extract_aperture_photometry(self, aperture_mask='pipeline', centroid_method='moments', sub_bkg=True, *args, **kwargs):
+        """Returns a LightCurve obtained using aperture photometry.
+
+        Parameters
+        ----------
+        aperture_mask : array-like, 'pipeline', 'threshold' or 'all'
+            A boolean array describing the aperture such that `True` means
+            that the pixel will be used.
+            If None or 'all' are passed, all pixels will be used.
+            If 'pipeline' is passed, the mask suggested by the official pipeline
+            will be returned.
+            If 'threshold' is passed, all pixels brighter than 3-sigma above
+            the median flux will be used.
+        sub_bkg : boolean
+            Whether to subtract background with same aperture mask or not to the aperture lightcurve
+        Returns
+        -------
+        lc : `.LightCurve` object
+            Array containing the summed flux within the aperture for each
+            cadence.
+        """
+        # enforce same aperture for flux, centroids and background integrations
+        aperture_mask = self._parse_aperture_mask(aperture_mask, *args, **kwargs)
+
+        if aperture_mask.sum() == 0:
+            log.warning('Warning: aperture mask contains zero pixels.')
+        centroid_col, centroid_row = self.estimate_centroids(aperture_mask, centroid_method)
+        # Ignore warnings related to zero or negative errors
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            flux_err = np.nansum(self.flux_err[:, aperture_mask] ** 2, axis=1) ** 0.5
+
+        lc = LightCurve(time=self.time,
+                          flux=np.nansum(self.flux[:, aperture_mask], axis=1),
+                          flux_err=flux_err, centroid_col=centroid_col,
+                          centroid_row=centroid_row, quality=self.quality, ra=self.ra,
+                          dec=self.dec, label=self.header['OBJECT'], targetid=self.targetid)
+        if sub_bkg:
+            return lc - self.get_bkg_lightcurve(aperture_mask, *args, **kwargs)
+        else:
+            return lc
