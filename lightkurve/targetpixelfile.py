@@ -1502,7 +1502,7 @@ class TessTargetPixelFile(TargetPixelFile):
 class SpitzerTargetPixelFile(TargetPixelFile):
     def __init__(self, path, quality_bitmask=None, targetid=None, **kwargs):
         super().__init__(path, quality_bitmask, targetid, **kwargs)
-        self._flux_bkg = np.ones_like(self.flux) * np.nan
+        self._flux_bkg = np.ones(len(self.flux)) * np.nan
 
     def __repr__(self):
         return('SpitzerTargetPixelFile Object (ID: {})'.format(self.targetid))
@@ -1514,12 +1514,24 @@ class SpitzerTargetPixelFile(TargetPixelFile):
         bkg flux in the corresponding fits file """
         return self._flux_bkg[self.quality_mask, None, None] * np.ones_like(self.flux)
 
-
     def estimate_bkg_flux(self, aperture_mask='circular', r=15):
-        """Performs background flux estimation.
+        """Performs background flux per pixel estimation.
         Not thoroughly tested, use at your own risk.
         Could be that this should be done while creating the TPF itself instead,
         to be able to take a larger annulus"""
         star_mask = self._parse_aperture_mask(aperture_mask, r=r)
         self._flux_bkg = np.nanmedian(self.flux[:, ~star_mask], 1)
+
+    def get_bkg_lightcurve(self, aperture_mask='circular', **kwargs):
+        aperture_mask = self._parse_aperture_mask(aperture_mask, **kwargs)
+        # Ignore warnings related to zero or negative errors
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            flux_bkg_err = np.nansum(self.flux_bkg_err[:, aperture_mask]**2, axis=1)**0.5
+
+        return LightCurve(time=self.time,
+                          flux=np.nansum(self.flux_bkg[:, aperture_mask], axis=1),
+                          flux_err=flux_bkg_err, label=self.header['OBJECT'],
+                          targetid=self.targetid, quality=self.quality,
+                          mission=self.mission)
 
