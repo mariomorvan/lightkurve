@@ -497,7 +497,7 @@ class TargetPixelFile(object):
         """ could potentially put this method higher up in the hierarchy"""
         image = np.nanmedian(self.flux, axis=0)
         if method == 'max':
-            return np.unravel_index(np.argmax(image), image.shape)
+            return np.unravel_index(np.nanargmax(image), image.shape)
         else:
             raise NotImplementedError
 
@@ -1161,7 +1161,7 @@ class KeplerTargetPixelFile(TargetPixelFile):
         If an integer is passed, it will be used as a bitmask, i.e. it will
         have the effect of removing cadences where
         ``(tpf.hdu[1].data['QUALITY'] & quality_bitmask) > 0``.
-        See the :class:`KeplerQualityFlags` class for details on the bitmasks.
+        See the :class:`KeplerQualityFlags` class for details on the bitmask.
     **kwargs : dict
         Optional keyword arguments passed on to `astropy.io.fits.open`.
 
