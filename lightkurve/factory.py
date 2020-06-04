@@ -278,6 +278,7 @@ class TargetPixelFileFactory(object):
         hdu.header['EXTNAME'] = 'APERTURE'
         return hdu
 
+
 class KeplerTargetPixelFileFactory(TargetPixelFileFactory):
     """Same as TargetPixelFileFactory."""
     # Backwards compatibility
@@ -343,3 +344,37 @@ class SpitzerTargetPixelFileFactory(TargetPixelFileFactory):
             self.pos_corr2[frameno] = header['POS_CORR2']
         elif 'PTGDIFFY' in header:
             self.pos_corr2[frameno] = header['PTGDIFFY']
+            
+    def _make_primary_hdu(self, hdu0_keywords):
+        """Returns the primary extension (#0)."""
+        hdu = fits.PrimaryHDU()
+        # Copy the default keywords from a template file from the MAST archive
+        tmpl = SpitzerTargetPixelFileFactory._header_template(0)
+        for kw in tmpl:
+            hdu.header[kw] = (tmpl[kw], tmpl.comments[kw])
+        # Override the defaults where necessary
+        hdu.header['ORIGIN'] = "Unofficial data product"
+        hdu.header['DATE'] = datetime.datetime.now().strftime("%Y-%m-%d")
+        hdu.header['TELESCOP'] = "Spitzer"
+        hdu.header['CREATOR'] = "lightkurve.SpitzerTargetPixelFileFactory"
+        hdu.header['OBJECT'] = self.targetid
+        hdu.header['AORKEY'] = self.targetid
+        # Empty a bunch of keywords rather than having incorrect info
+        for kw in ["PROCVER", "FILEVER", "CHANNEL", "MODULE", "OUTPUT",
+                   "TIMVERSN", "CAMPAIGN", "DATA_REL", "TTABLEID",
+                   "RA_OBJ", "DEC_OBJ"]:
+            hdu.header[kw] = ""
+
+        # Some keywords just shouldn't be passed to the new header.
+        bad_keys = ['ORIGIN', 'DATE', 'OBJECT', 'SIMPLE', 'BITPIX',
+                    'NAXIS', 'EXTEND', 'NEXTEND', 'EXTNAME', 'NAXIS1',
+                    'NAXIS2', 'QUALITY', 'KEPLERID']
+        for kw, val in hdu0_keywords.items():
+            if kw in bad_keys:
+                continue
+            if kw in hdu.header:
+                hdu.header[kw] = val
+            else:
+                hdu.header.append((kw, val))
+        return hdu 
+    

@@ -1067,10 +1067,16 @@ class TargetPixelFile(object):
         allkeys.update(carry_keywords)
 
         # Create a factory and set default keyword values based on the middle image
-        factory = TargetPixelFileFactory(n_cadences=len(images),
-                                         n_rows=size[0],
-                                         n_cols=size[1],
-                                         targetid=targetid)
+        if allkeys['MISSION'].strip().lower() == 'spitzer':
+            factory = SpitzerTargetPixelFileFactory(n_cadences=len(images),
+                                             n_rows=size[0],
+                                             n_cols=size[1],
+                                             targetid=targetid)
+        else:
+            factory = TargetPixelFileFactory(n_cadences=len(images),
+                                             n_rows=size[0],
+                                             n_cols=size[1],
+                                             targetid=targetid)
 
         factory.keywords = mid_hdu.header
 
