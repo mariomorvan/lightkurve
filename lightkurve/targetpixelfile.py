@@ -1575,11 +1575,11 @@ class SpitzerTargetPixelFile(TargetPixelFile):
             warnings.simplefilter("ignore", RuntimeWarning)
             flux_err = np.nansum(self.flux_err[:, aperture_mask] ** 2, axis=1) ** 0.5
 
-        lc = LightCurve(time=self.time,
-                          flux=np.nansum(self.flux[:, aperture_mask], axis=1),
-                          flux_err=flux_err, centroid_col=centroid_col,
-                          centroid_row=centroid_row, quality=self.quality, ra=self.ra,
-                          dec=self.dec, label=self.header['OBJECT'], targetid=self.targetid)
+        lc = LightCurve(time=self.time, time_scale='tdb', time_format='mjd',
+                        flux=np.nansum(self.flux[:, aperture_mask], axis=1),
+                        flux_err=flux_err, centroid_col=centroid_col,
+                        centroid_row=centroid_row, quality=self.quality, ra=self.ra,
+                        dec=self.dec, label=self.header['OBJECT'], targetid=self.targetid)
         if sub_bkg:
             return lc - self.get_bkg_lightcurve(aperture_mask, *args, **kwargs)
         else:

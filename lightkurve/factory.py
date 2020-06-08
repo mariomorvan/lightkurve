@@ -326,10 +326,12 @@ class SpitzerTargetPixelFileFactory(TargetPixelFileFactory):
             self.time[frameno] = (header['TSTART'] + header['TSTOP']) / 2.
         elif 'BMJD_OBS' in header and 'FRAMTIME' in header:
             if not self.n_sub:
-                self.time[frameno] = header['BMJD_OBS'] + header['FRAMTIME'] / 2. / 86400.0
+                self.time[frameno] = (header['BMJD_OBS'] + (header['ET_OBS'] - header['UTCS_OBS'] 
+                                                            + header['FRAMTIME'] / 2.) / 86400.0)
             else:
                 self.time[frameno * self.n_sub:(frameno + 1) * self.n_sub] = \
-                    np.linspace(0., header['FRAMTIME'] * self.n_sub / 86400.0, self.n_sub) + header['BMJD_OBS']
+                    (np.linspace(0., header['FRAMTIME'] * self.n_sub , self.n_sub)
+                     + header['BMJD_OBS'] + header['ET_OBS'] - header['UTCS_OBS']) / 86400.0
         if 'TIMECORR' in header:
             self.timecorr[frameno] = header['TIMECORR']
         if 'CADENCEN' in header:
