@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 import numpy as np
 from functools import wraps
+from scipy.optimize import curve_fit
+from astropy.modeling.functional_models import Gaussian2D
 
 log = logging.getLogger(__name__)
 
@@ -633,3 +635,86 @@ def centroid_quadratic(data, mask=None):
     xm = - (2 * f * b - c * e) / det
     ym = - (2 * d * c - b * e) / det
     return xx + xm, yy + ym
+
+
+def gaussian2dOffset(data,
+                     offset=0,
+                     amplitude=1,
+                     x_mean=0,
+                     y_mean=0,
+                     x_stddev=None,
+                     y_stddev=None,
+                     theta=None):
+    """ Computes a 2D gaussian function with offset
+    :param data: 
+    :param offset: 
+    :param amplitude: 
+    :param x_mean: 
+    :param y_mean: 
+    :param x_stddev: 
+    :param y_stddev: 
+    :param theta: 
+    :return: 
+    """
+    assert len(data) == 2
+    return offset + Gaussian2D(amplitude, x_mean, y_mean, x_stddev,
+                               y_stddev, theta, cov_matrix=None)(*data).ravel()
+
+
+def gaussian2dFit(image, centre=None, **kwargs):
+    """ Fits a 2D image with a 2D gaussian with offset
+    :param image: 
+    :param centre: 
+    :param kwargs: 
+    :return: 
+    """
+    nx, ny = image.shape
+    
+    mask = np.isfinite(image)
+    
+    # Flux values defined as central pixel coordinates
+    x = np.linspace(0.5, nx + 0.5, ny)
+    y = np.linspace(0.5, ny + 0.5, nx)
+    x, y = np.meshgrid(x, y)
+    mesh = x[mask].ravel(), y[mask].ravel()
+
+    if centre is None:
+        x0, y0 = nx / 2, ny / 2 
+    else:
+        x0, y0 = centre
+        
+    max_flux = np.nanmax(image)
+
+    p0 = (np.nanmedian(image),
+          max_flux / 2,
+          x0,
+          y0,
+          np.nanstd(np.nanmean(image, 1)),
+          np.nanstd(np.nanmean(image, 0)),
+          0.)
+
+    # pars : offset, amplitude, mu_x, mu_y, sig_x, sig_y, theta
+    bounds = [(0, max_flux),
+              (0., 5 * max_flux),
+              (0., nx + 1),
+              (0., ny + 1),
+              (0., nx),
+              (0., ny),
+              (-np.pi / 2, np.pi / 2)]
+    par_names = "offset", "amplitude", "mu_x", "mu_y", "sig_x", "sig_y", "theta"
+    for p, (max_flux, M), par_name in zip(p0, bounds, par_names):
+        if not max_flux <= p <= M:
+            mess = f'param {par_name}={p} not in bounds {max_flux, M}'
+            raise RuntimeError(mess)
+    bounds = list(zip(*bounds))
+
+    popt, pcov = curve_fit(gaussian2dOffset,
+                           mesh,
+                           image[mask].ravel(),
+                           p0=p0,
+                           # maxfev=50000,
+                           bounds=bounds,
+                           **kwargs
+                          )
+    return popt, pcov 
+

@@ -27,7 +27,7 @@ from .prf import KeplerPRF
 from .utils import KeplerQualityFlags, TessQualityFlags, \
                    plot_image, bkjd_to_astropy_time, btjd_to_astropy_time, \
                    LightkurveWarning, detect_filetype, validate_method, \
-                   centroid_quadratic
+                   centroid_quadratic, gaussian2dFit
 
 __all__ = ['TargetPixelFile', 'KeplerTargetPixelFile', 'TessTargetPixelFile']
 from .factory import TargetPixelFileFactory, SpitzerTargetPixelFileFactory
@@ -493,11 +493,18 @@ class TargetPixelFile(object):
         pix_y = np.arange(ny)[np.newaxis, :].repeat(nx, 0)
         return (pix_x - centre[0]) ** 2 + (pix_y - centre[1]) ** 2 <= r ** 2
 
-    def find_centre(self, method='max'):
-        """ could potentially put this method higher up in the hierarchy"""
+    def find_centre(self, method_centre='max', return_std=False):
+        """Finds the centre of light in the tpf using the median image
+        method_centre: 'max' or 'gaussian' for a 2d gaussian fit."""
         image = np.nanmedian(self.flux, axis=0)
-        if method == 'max':
-            return np.unravel_index(np.nanargmax(image), image.shape)
+        if method_centre == 'max':
+            return tuple(np.array(np.unravel_index(np.nanargmax(image), image.shape)) + 0.5)
+        elif method_centre == "gaussian":
+            c0 = np.array(np.unravel_index(np.nanargmax(image), image.shape)) + 0.5
+            popt, _ = gaussian2dFit(image, centre=c0)
+            if return_std:
+                return popt[2], popt[3], popt[4], popt[5]
+            return popt[2], popt[3]
         else:
             raise NotImplementedError
 
